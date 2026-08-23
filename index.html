@@ -10,6 +10,139 @@
 	<div style="text-align: center;">
 	<h1 style="position: sticky; top: 0; background: white; padding: 15px 0; margin: 0 0 20px 0; z-index: 999; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">📦GuideBox</h1>
 
+	<input type="text" id="searchbox" placeholder="Search..." style="padding: 10px 30px; border: 1px solid #ccc;">
+	<script>
+		document.getElementById('searchbox').addEventListener('keydown', function(e) {
+			if (e.key === 'Enter') {
+				 window.open('https://www.baidu.com/s?wd=' + encodeURIComponent(this.value), '_blank');
+			}
+		});
+	</script>
+
+	<a href="#"><img src="image/top.png" style="position:fixed; bottom:80px; right:20px; width:50px; z-index:999;"></a>
+	
+	<a href="https://www.aitoollab.cn/tools/"><img src="image/ai.png" style="position:fixed; bottom:150px; right:20px; width:50px; z-index:999;"></a>
+
+	 <div id="chat-container"></div>
+    	<script>
+        (function() {
+            // 1. 在这里设置你的 API 密钥和基础 URL
+            const API_KEY = 'sk-hqWXAfb7wNYeXgJAFJTDLyOTWotJVryfX0ZFXwdomo3HdTZQ'; // ⚠️ 请替换为你的真实密钥
+            const API_BASE_URL = 'https://api.chatanywhere.tech/';
+
+            // 2. 以下是聊天界面的核心逻辑，用于向后端 API 发送消息
+            // 注意：这是一个极简的前端示例，生产环境建议将 API 调用放在后端
+            const chatContainer = document.getElementById('chat-container');
+            
+            // 创建聊天 UI
+            const chatBox = document.createElement('div');
+            chatBox.style.cssText = `
+                position: fixed; bottom: 20px; left: 20px; width: 350px; 
+                height: 510px; border: 1px solid #ccc; border-radius: 10px; 
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; 
+                flex-direction: column; background: white; z-index: 1000;
+                font-family: sans-serif; overflow: hidden;
+            `;
+            
+            // 消息展示区
+            const messagesDiv = document.createElement('div');
+            messagesDiv.style.cssText = 'flex: 1; padding: 15px; overflow-y: auto;';
+            chatBox.appendChild(messagesDiv);
+            
+            // 输入区
+            const inputArea = document.createElement('div');
+            inputArea.style.cssText = 'display: flex; padding: 10px; border-top: 1px solid #eee;';
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Ask...';
+            input.style.cssText = 'flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-right: 8px;';
+            
+            const sendBtn = document.createElement('button');
+            sendBtn.textContent = 'Send';
+            sendBtn.style.cssText = 'padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;';
+            
+            inputArea.appendChild(input);
+            inputArea.appendChild(sendBtn);
+            chatBox.appendChild(inputArea);
+            chatContainer.appendChild(chatBox);
+
+            // 添加一条欢迎消息
+            const welcomeMsg = document.createElement('div');
+            welcomeMsg.textContent = 'Hello！I am AI，can I help you？';
+            welcomeMsg.style.cssText = 'margin-bottom: 10px; padding: 8px 12px; background: #f1f1f1; border-radius: 8px; align-self: flex-start;';
+            messagesDiv.appendChild(welcomeMsg);
+
+            // 发送消息函数
+            async function sendMessage() {
+                const message = input.value.trim();
+                if (!message) return;
+
+                // 显示用户消息
+                const userMsg = document.createElement('div');
+                userMsg.textContent = message;
+                userMsg.style.cssText = 'margin-bottom: 10px; padding: 8px 12px; background: #e3f2fd; border-radius: 8px; align-self: flex-end; text-align: right;';
+                messagesDiv.appendChild(userMsg);
+                input.value = '';
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+                // 显示“正在输入...”状态
+                const typingMsg = document.createElement('div');
+                typingMsg.textContent = '正在输入...';
+                typingMsg.style.cssText = 'margin-bottom: 10px; padding: 8px 12px; background: #f1f1f1; border-radius: 8px; align-self: flex-start;';
+                messagesDiv.appendChild(typingMsg);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+                try {
+                    // 调用 ChatAnywhere API
+                    const response = await fetch(`${API_BASE_URL}/chat/completions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${API_KEY}`
+                        },
+                        body: JSON.stringify({
+                            model: 'gpt-3.5-turbo', // 可更换模型，如 deepseek-chat
+                            messages: [{ role: 'user', content: message }]
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error?.message || `API 请求失败 (状态码: ${response.status})`);
+                    }
+
+                    const data = await response.json();
+                    const reply = data.choices[0].message.content;
+
+                    // 移除“正在输入...”状态，显示 AI 回复
+                    messagesDiv.removeChild(typingMsg);
+                    const aiMsg = document.createElement('div');
+                    aiMsg.textContent = reply;
+                    aiMsg.style.cssText = 'margin-bottom: 10px; padding: 8px 12px; background: #f1f1f1; border-radius: 8px; align-self: flex-start; white-space: pre-wrap;';
+                    messagesDiv.appendChild(aiMsg);
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+                } catch (error) {
+                    console.error('API 调用出错:', error);
+                    messagesDiv.removeChild(typingMsg);
+                    const errorMsg = document.createElement('div');
+                    errorMsg.textContent = `❌ 出错了: ${error.message}`;
+                    errorMsg.style.cssText = 'margin-bottom: 10px; padding: 8px 12px; background: #ffebee; border-radius: 8px; align-self: flex-start; color: #c62828;';
+                    messagesDiv.appendChild(errorMsg);
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }
+            }
+
+            // 绑定按钮点击和回车键事件
+            sendBtn.addEventListener('click', sendMessage);
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+
+        })();
+    	</script>
+
 	<h2>AI<br></h2>
 	<a href="https://www.deepseek.com/" target="_blank"><img src="image/deepseek.webp" width="50" height="50"></a>
 	<a href="https://www.doubao.com/" target="_blank"><img src="image/doubao.webp" width="50" height="50"></a>
